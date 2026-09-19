@@ -54,6 +54,16 @@ class DoctorSpecialtyImageTests(TestCase):
 
 
 class DoctorModelTests(TestCase):
+    @staticmethod
+    def image_upload(width, height, image_format="PNG"):
+        content = BytesIO()
+        Image.new("RGB", (width, height), "teal").save(content, format=image_format)
+        return SimpleUploadedFile(
+            f"doctor.{image_format.lower()}",
+            content.getvalue(),
+            content_type=f"image/{image_format.lower()}",
+        )
+
     def test_generates_slug_with_provider_slug_suffix(self):
         state = State.objects.create(
             name="West Bengal",
@@ -78,6 +88,43 @@ class DoctorModelTests(TestCase):
         )
 
         self.assertEqual(doctor.slug, f"dr-ananya-sen-at-{provider.slug}")
+
+    def test_profile_image_is_compressed_with_unique_webp_name(self):
+        state = State.objects.create(
+            name="West Bengal",
+            slug="west-bengal",
+            code="WB",
+        )
+        city = City.objects.create(
+            name="Kolkata",
+            slug="kolkata",
+            state=state,
+        )
+        provider = Provider.objects.create(
+            name="CarePlus Clinic",
+            locality="Garia",
+            city=city,
+            address="1 Demo Road",
+        )
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                doctor = Doctor.objects.create(
+                    provider=provider,
+                    name="Dr. Image Test",
+                    profile_image=self.image_upload(1400, 700),
+                )
+
+                image_name = Path(doctor.profile_image.name)
+                self.assertEqual(image_name.parent.as_posix(), "doctors")
+                self.assertEqual(image_name.suffix, ".webp")
+                self.assertEqual(len(image_name.stem), 32)
+
+                with Image.open(doctor.profile_image.path) as compressed:
+                    self.assertEqual(compressed.format, "WEBP")
+                    self.assertEqual(compressed.size, (1024, 512))
+
+                self.assertTrue(Path(doctor.profile_image.path).exists())
 
 
 class ImportDoctorSpecialtiesCommandTests(TestCase):
