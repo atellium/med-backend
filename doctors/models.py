@@ -214,6 +214,14 @@ class Doctor(TimestampedModel):
         if update_fields is not None:
             kwargs["update_fields"] = set(update_fields) | {"slug"}
 
+        if self.profile_image and not self.profile_image._committed:
+            self.profile_image = compress_image(
+                self.profile_image,
+                quality=80,
+                max_width=1024,
+                convert_to_webp=True,
+            )
+
         super().save(*args, **kwargs)
 
     def _provider_slug(self):

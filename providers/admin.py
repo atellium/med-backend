@@ -102,7 +102,7 @@ class ProviderAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Catalog",
+            "Services & Facilities",
             {
                 "fields": (
                     "offerings",
